@@ -5,9 +5,10 @@
 
 ## 보기
 
-- `docs/index.html` 더블클릭 (인터넷 연결·설치 불필요)
-- 또는 `cd docs && python -m http.server 8000` → http://localhost:8000
-- GitHub Pages 로 올릴 때는 `docs/` 폴더를 배포 대상으로 지정
+- **웹**: https://dindoopark.github.io/hospital-accreditation-manual-v2/
+  (검색엔진 수집은 막아 두었습니다. 주소를 아는 사람만 열 수 있습니다)
+- **휴대폰**: 위 주소를 연 뒤 홈 화면에 추가 (안내 페이지: `install.html`). 한 번 본 내용은 인터넷이 끊겨도 열립니다.
+- **USB·PC**: `docs/index.html` 더블클릭 (인터넷 연결·설치 불필요)
 
 ## 구조
 
@@ -29,7 +30,9 @@ validate.py   sections/*.json 형식 검사
 
 1. `content/sections/1.1.json` 처럼 해당 기준 파일을 수정
 2. `python validate.py 1.1` 로 형식 확인
-3. `python build.py` → `docs/data.js` 갱신
+3. `push.cmd` 더블클릭 → `docs/data.js` 갱신 + GitHub 반영 (1~2분 뒤 웹에 적용)
+
+`push.cmd` 없이 직접 할 때는 `python build.py` 로 `docs/data.js` 만 갱신하면 됩니다.
 
 본문 블록 종류: `list`(목록) · `steps`(순서 절차) · `table`(표) · `qa`(질문/답) · `callout`(강조 상자) · `figure`(슬라이드 크게 보기).
 문자열 안에서는 `**굵게**` 만 사용.
@@ -42,3 +45,26 @@ python build.py --slides 인증교육.pdf    # docs/slides/ 재생성 + data.js 
 ```
 
 쪽 번호가 달라졌다면 `content/toc.json` 의 `pages` 와 각 본문의 `figure.page` 도 함께 맞춘다.
+
+## 홈 화면 추가(PWA)
+
+`manifest.webmanifest` · `sw.js` · `pwa.js` · `install.html` · `icons/` 가 담당합니다.
+아이콘을 다시 만들려면 `python build.py --icons` (원본 모양은 `docs/icons/icon.svg`).
+
+내용을 바꾼 뒤 이미 설치한 사람에게 「지금 새로고침」 안내를 띄우려면
+`docs/sw.js` 맨 위 `VERSION` 을 올리세요 (`'v1'` → `'v2'`).
+올리지 않아도 다음 접속 때 새 내용으로 바뀌기는 합니다.
+
+## git 저장소 위치
+
+이 폴더가 있는 드라이브는 점(`.`)으로 시작하는 파일을 만들 수 없어 `.git` 을 여기 둘 수 없습니다.
+그래서 저장소 폴더만 `C:/Users/PC/repos/hospital-accreditation-manual-v2.git` 에 따로 두고
+작업 파일은 이 폴더를 그대로 씁니다. `push.cmd` 가 이 연결을 처리하므로 평소에는 신경 쓸 일이 없습니다.
+
+직접 git 명령을 쓸 때는 두 위치를 함께 지정합니다.
+
+```bash
+git --git-dir="C:/Users/PC/repos/hospital-accreditation-manual-v2.git" --work-tree="." status
+```
+
+제외 규칙은 `.gitignore` 대신 그 저장소 폴더의 `info/exclude` 에 있습니다.
