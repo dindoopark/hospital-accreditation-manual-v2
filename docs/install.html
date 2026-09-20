@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>홈 화면에 추가하기 – 의료기관평가인증 매뉴얼</title>
+<meta name="theme-color" content="#fbfbfa" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+<link rel="icon" href="./icons/favicon-32.png" sizes="32x32" type="image/png" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="./index.html" class="home-btn">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9.2 10 3.5l7 5.7V16a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1V9.2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      <span>처음</span>
+    </a>
+    <a href="./index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">인증 매뉴얼</span>
+    </a>
+  </div>
+</header>
+
+<main>
+  <div class="home-head">
+    <p class="home-eyebrow">설치 안내</p>
+    <h1 class="home-title">홈 화면에 추가하기</h1>
+    <p class="home-sub">휴대폰 홈 화면에 아이콘으로 두면 앱처럼 바로 열리고, 한 번 본 내용은 인터넷이 끊겨도 볼 수 있습니다.</p>
+  </div>
+
+  <div class="block" id="addr">
+    <h2>매뉴얼 주소</h2>
+    <p class="addr-row"><code id="siteUrl">주소를 불러오는 중…</code><button type="button" id="copyBtn">주소 복사</button></p>
+    <p class="addr-note" id="fileNote" hidden>지금은 USB·PC에 있는 파일을 직접 열었기 때문에 홈 화면 추가가 되지 않습니다. 인터넷 주소로 접속한 뒤 아래 방법을 따라 주세요.</p>
+  </div>
+
+  <div id="guides"></div>
+
+  <div class="block">
+    <h2>자주 묻는 것</h2>
+    <div class="qa">
+      <details><summary>데이터가 많이 드나요?</summary><div class="ans">처음 열 때 본문(약 1.3MB)을 받고, 슬라이드 그림은 열어 본 것만 저장합니다. 전체 슬라이드를 다 열면 약 25MB 정도입니다.</div></details>
+      <details><summary>인터넷이 안 되는 곳에서도 되나요?</summary><div class="ans">한 번 연 화면은 그대로 열립니다. 아직 열어 보지 않은 슬라이드 그림은 인터넷이 있어야 보입니다.</div></details>
+      <details><summary>내용이 바뀌면 어떻게 되나요?</summary><div class="ans">앱을 열면 자동으로 확인해서, 새 내용이 있으면 화면 아래에 새로고침 안내가 뜹니다.</div></details>
+      <details><summary>아이콘을 지우려면?</summary><div class="ans">홈 화면에서 아이콘을 길게 눌러 삭제하면 됩니다. 저장된 내용도 함께 지워집니다.</div></details>
+    </div>
+  </div>
+</main>
+
+<footer class="site-foot"><a href="./index.html">매뉴얼로 돌아가기</a></footer>
+
+<script>
+(function () {
+  var url = location.href.replace(/install\.html.*$/, '');
+  var isFile = location.protocol === 'file:';
+  document.getElementById('siteUrl').textContent = isFile ? '(파일로 열림)' : url;
+  document.getElementById('fileNote').hidden = !isFile;
+
+  var copyBtn = document.getElementById('copyBtn');
+  copyBtn.hidden = isFile;
+  copyBtn.addEventListener('click', function () {
+    var done = function () { copyBtn.textContent = '복사됨'; setTimeout(function () { copyBtn.textContent = '주소 복사'; }, 1500); };
+    if (navigator.clipboard) { navigator.clipboard.writeText(url).then(done, function () {}); return; }
+    var t = document.createElement('textarea');
+    t.value = url; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); done(); } catch (e) { /* 수동 복사 */ }
+    t.remove();
+  });
+
+  var ua = navigator.userAgent;
+  var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isSamsung = /SamsungBrowser/.test(ua);
+  var isAndroid = /Android/.test(ua);
+
+  var GUIDES = [
+    { id: 'ios', name: 'iPhone · iPad (Safari)', match: isIOS, steps: [
+      'Safari 로 이 페이지를 엽니다. (크롬 등 다른 브라우저는 홈 화면 추가가 안 될 수 있습니다)',
+      '화면 아래 가운데 <b>공유</b> 버튼(네모에 위쪽 화살표)을 누릅니다.',
+      '목록을 올려서 <b>홈 화면에 추가</b>를 누릅니다.',
+      '오른쪽 위 <b>추가</b>를 누르면 끝입니다.'
+    ] },
+    { id: 'samsung', name: 'Android (삼성 인터넷)', match: isSamsung, steps: [
+      '화면 아래 <b>메뉴</b>(줄 세 개)를 누릅니다.',
+      '<b>현재 페이지 추가</b> 또는 <b>페이지 추가</b>를 누릅니다.',
+      '<b>홈 화면</b>을 고른 뒤 <b>추가</b>를 누릅니다.'
+    ] },
+    { id: 'android', name: 'Android (Chrome)', match: isAndroid && !isSamsung, steps: [
+      '오른쪽 위 <b>점 세 개</b> 메뉴를 누릅니다.',
+      '<b>홈 화면에 추가</b> 또는 <b>앱 설치</b>를 누릅니다.',
+      '<b>설치</b> 또는 <b>추가</b>를 누르면 끝입니다.'
+    ] },
+    { id: 'pc', name: 'PC (Chrome · Edge)', match: !isIOS && !isAndroid, steps: [
+      '주소창 오른쪽 끝의 <b>설치</b> 아이콘(모니터에 아래 화살표)을 누릅니다.',
+      '보이지 않으면 <b>점 세 개</b> 메뉴 → <b>캐스트, 저장 및 공유</b> → <b>페이지를 앱으로 설치</b> 를 고릅니다.',
+      '<b>설치</b>를 누르면 창 하나짜리 앱으로 열립니다.'
+    ] }
+  ];
+
+  GUIDES.sort(function (a, b) { return (b.match ? 1 : 0) - (a.match ? 1 : 0); });
+  document.getElementById('guides').innerHTML = GUIDES.map(function (g) {
+    return '<div class="block">'
+      + '<h2>' + g.name + (g.match ? ' <span class="tag blue">내 기기</span>' : '') + '</h2>'
+      + '<ol class="steps-num">' + g.steps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>'
+      + '</div>';
+  }).join('');
+})();
+</script>
+</body>
+</html>

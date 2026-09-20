@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="googlebot" content="noindex, nofollow" />
+<title>의료기관평가인증 매뉴얼</title>
+<meta name="description" content="의료기관평가인증 교육 매뉴얼. 개요 · 필수인증항목 · 그 외 항목." />
+<meta name="theme-color" content="#fbfbfa" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+<link rel="icon" href="./icons/favicon-32.png" sizes="32x32" type="image/png" />
+<link rel="icon" href="./icons/favicon-16.png" sizes="16x16" type="image/png" />
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="인증 매뉴얼" />
+<meta name="application-name" content="인증 매뉴얼" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="#/" class="home-btn" id="homeBtn" hidden>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9.2 10 3.5l7 5.7V16a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1V9.2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      <span>처음</span>
+    </a>
+    <a href="#/" class="brand" id="brandLink">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">인증 매뉴얼</span>
+    </a>
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13.2 13.2 17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="searchInput" type="search" placeholder="검색 (예: 환자확인, 구두처방, 손위생, 소화기)" autocomplete="off" />
+      <button id="clearBtn" type="button" aria-label="검색어 지우기" hidden>&times;</button>
+      <ul id="searchResults" class="search-results" hidden></ul>
+    </div>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<footer class="site-foot">
+  <a href="./install.html">휴대폰 홈 화면에 아이콘으로 추가하는 방법</a>
+</footer>
+
+<div id="lightbox" class="lightbox" hidden>
+  <button class="lb-btn lb-close" data-act="close" aria-label="닫기">&times;</button>
+  <button class="lb-btn lb-prev" data-act="prev" aria-label="이전 슬라이드">&#8249;</button>
+  <img id="lightboxImg" alt="" />
+  <button class="lb-btn lb-next" data-act="next" aria-label="다음 슬라이드">&#8250;</button>
+  <div class="lb-count" id="lightboxCount"></div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script src="pwa.js"></script>
+</body>
+</html>

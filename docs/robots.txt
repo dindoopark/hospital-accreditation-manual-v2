@@ -1,0 +1,3 @@
+# 검색엔진 수집 금지 (원내 지침 자료)
+User-agent: *
+Disallow: /
