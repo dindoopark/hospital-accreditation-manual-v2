@@ -80,7 +80,7 @@
 
   // state: 'open' (본문 보임) → 'locked' (키패드) → 'unlocking' (맞은 PIN, 0.25초 뒤 열림) → 'open'
   var state = 'open', reason = 'start';
-  var input = '', fails = 0, waitUntil = 0, lastActive = Date.now(), scrollPos = null;
+  var input = '', fails = 0, waitUntil = 0, lastActive = Date.now(), scrollPos = null, shownAt = 0;
   var el, dots, msg, pad;
 
   var LOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -119,6 +119,7 @@
     pad = el.querySelector('.pl-pad');
     // 마우스로 누른 키에 포커스가 남으면 Enter·Space 가 그 키를 한 번 더 누르게 되므로 포커스를 옮기지 않는다.
     pad.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    el.addEventListener('click', function (e) { e.stopPropagation(); }); // 키패드 누름이 뒤쪽 화면(검색 목록 닫기 등)에 닿지 않게
     pad.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('.pl-key') : null;
       if (b && !b.disabled) press(b.getAttribute('data-k'));
@@ -135,8 +136,13 @@
     if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) {
       document.activeElement.blur(); // 열려 있던 휴대폰 키보드 닫기
     }
+    // 모달 창(<dialog>)이나 전체화면은 키패드보다 위에 떠서 누름을 가로채므로 먼저 닫는다.
+    try { if (document.fullscreenElement && document.exitFullscreen) { var fs = document.exitFullscreen(); if (fs && fs.catch) fs.catch(function () {}); } } catch (e) { /* 무시 */ }
+    var dialogs = document.querySelectorAll ? document.querySelectorAll('dialog[open]') : [];
+    for (var i = 0; i < dialogs.length; i++) { try { dialogs[i].close(); } catch (e) { /* 무시 */ } }
     root.classList.add('pin-locked');
     window.addEventListener('keydown', onKey, true);
+    shownAt = Date.now();
     mount();
   }
   window.PinLock.lock = function () { lock('manual'); };
@@ -148,6 +154,7 @@
 
   function press(k) {
     if (state !== 'locked' || !el || Date.now() < waitUntil) return;
+    if (reason === 'idle' && Date.now() - shownAt < 400) return; // 잠금을 일으킨 그 터치가 숫자로 들어가지 않게
     if (k === 'back') input = input.slice(0, -1);
     else if (k === 'clear') input = '';
     else if (input.length < LEN) input += k;
@@ -178,6 +185,7 @@
   }
 
   function unlock() {
+    var at = Date.now();
     state = 'unlocking';
     fails = 0;
     msg.textContent = '';
@@ -188,8 +196,9 @@
       if (el && el.parentNode) el.parentNode.removeChild(el);
       el = null;
       if (scrollPos) window.scrollTo(scrollPos[0], scrollPos[1]);
-      lastActive = Date.now();
+      lastActive = at;
       state = 'open';
+      checkIdle(); // 이 짧은 사이에 화면이 꺼졌다 오래 뒤에 켜진 경우 다시 잠금
     }, 250);
   }
 
@@ -203,7 +212,11 @@
   }
 
   // ===== 사용하지 않은 시간이 IDLE_MIN 분을 넘으면 다시 잠금 =====
-  function active() { if (state === 'open') lastActive = Date.now(); }
+  function active() {
+    if (state !== 'open') return;
+    if (Date.now() - lastActive >= IDLE_MS) return lock('idle'); // 오래 멈췄다 깨어난 뒤 첫 조작이면 먼저 잠근다
+    lastActive = Date.now();
+  }
   ['pointerdown', 'touchstart', 'keydown', 'wheel', 'scroll', 'mousemove'].forEach(function (t) {
     document.addEventListener(t, active, { capture: true, passive: true });
   });

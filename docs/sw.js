@@ -2,7 +2,7 @@
    본문(data.js)이나 화면을 고쳤으면 아래 VERSION 을 올려야 기존 사용자에게 새 내용이 전달됩니다. */
 const VERSION = 'v1';
 // 화면 파일(html·js·css, 잠금 화면 등)만 바뀌었을 때 올립니다. 이미 본 슬라이드 캐시는 그대로 둡니다.
-const SHELL_REV = 2;
+const SHELL_REV = 3;
 const SHELL_CACHE = `shell-${VERSION}-${SHELL_REV}`;
 const ASSET_CACHE = `asset-${VERSION}`;
 
@@ -27,9 +27,13 @@ const SHELL = [
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
-    // 하나가 실패해도 설치 자체는 진행되도록 개별 처리.
+    // 하나가 실패해도 설치 자체는 진행되도록 개별 처리. 단 첫 화면과 잠금 화면은 꼭 있어야 하므로
+    // 이것들을 못 받으면 설치를 멈추고 기존 버전을 계속 쓴다 (다음 접속 때 다시 시도).
     // cache: 'reload' — 브라우저 HTTP 캐시(최대 10분)에 남은 옛 파일 대신 서버의 새 파일을 받는다.
-    await Promise.all(SHELL.map((url) => cache.add(new Request(url, { cache: 'reload' })).catch(() => {})));
+    const required = ['./', './index.html', './lock.js'];
+    await Promise.all(SHELL.map((url) => cache.add(new Request(url, { cache: 'reload' })).catch((err) => {
+      if (required.includes(url)) throw err;
+    })));
     self.skipWaiting();
   })());
 });
@@ -38,8 +42,14 @@ self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keep = [SHELL_CACHE, ASSET_CACHE];
     const names = await caches.keys();
+    const shellChanged = names.some((n) => n.startsWith('shell-') && n !== SHELL_CACHE);
     await Promise.all(names.filter((n) => !keep.includes(n)).map((n) => caches.delete(n)));
     await self.clients.claim();
+    // 화면 파일이 바뀐 업데이트면 열려 있는 창을 새로고침해 옛 화면(옛 잠금 코드)이 남지 않게 한다.
+    if (shellChanged) {
+      const wins = await self.clients.matchAll({ type: 'window' });
+      wins.forEach((c) => { if (c.navigate) c.navigate(c.url).catch(() => {}); });
+    }
   })());
 });
 
