@@ -12,6 +12,7 @@ const SHELL = [
   './app.js',
   './data.js',
   './pwa.js',
+  './lock.js',
   './install.html',
   './manifest.webmanifest',
   './icons/icon.svg',
@@ -24,8 +25,9 @@ const SHELL = [
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
-    // 하나가 실패해도 설치 자체는 진행되도록 개별 처리
-    await Promise.all(SHELL.map((url) => cache.add(url).catch(() => {})));
+    // 하나가 실패해도 설치 자체는 진행되도록 개별 처리.
+    // cache: 'reload' — 브라우저 HTTP 캐시(최대 10분)에 남은 옛 파일 대신 서버의 새 파일을 받는다.
+    await Promise.all(SHELL.map((url) => cache.add(new Request(url, { cache: 'reload' })).catch(() => {})));
     self.skipWaiting();
   })());
 });
