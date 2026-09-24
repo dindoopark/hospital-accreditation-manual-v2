@@ -1,7 +1,9 @@
 /* 오프라인 캐시 서비스워커.
    본문(data.js)이나 화면을 고쳤으면 아래 VERSION 을 올려야 기존 사용자에게 새 내용이 전달됩니다. */
 const VERSION = 'v1';
-const SHELL_CACHE = `shell-${VERSION}`;
+// 화면 파일(html·js·css, 잠금 화면 등)만 바뀌었을 때 올립니다. 이미 본 슬라이드 캐시는 그대로 둡니다.
+const SHELL_REV = 2;
+const SHELL_CACHE = `shell-${VERSION}-${SHELL_REV}`;
 const ASSET_CACHE = `asset-${VERSION}`;
 
 // 앱 셸: 설치 시 미리 받아 둔다 (슬라이드 이미지는 용량이 커서 본 것만 캐시)
