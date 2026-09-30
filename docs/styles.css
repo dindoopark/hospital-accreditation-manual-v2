@@ -122,6 +122,7 @@ main { max-width: 960px; margin: 0 auto; padding: 36px 20px 96px; }
   color: var(--ink); margin: 0; font-weight: 800;
 }
 .home-sub { margin: 14px 0 0; color: var(--muted); font-size: 15px; }
+.home-upd { display: inline-block; margin: 12px 0 0; font-size: 13px; font-weight: 600; color: var(--blue-tx); background: var(--blue-bg); padding: 3px 10px; border-radius: 999px; }
 
 .part-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .part-card {
@@ -249,6 +250,8 @@ th { background: #f7f6f3; font-weight: 700; color: var(--ink); white-space: nowr
 
 .slides-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .slides-head .hint { font-size: 13px; color: var(--muted); }
+.slides-sub { font-size: 14px; font-weight: 700; color: var(--ink); margin: 18px 0 8px; }
+.slides-sub span { font-weight: 500; color: var(--muted); margin-left: 4px; }
 .slide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
 .slide-grid button { border: none; padding: 0; background: none; cursor: zoom-in; position: relative; display: block; }
 .slide-grid .pno {

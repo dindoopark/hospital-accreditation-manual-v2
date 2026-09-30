@@ -1,6 +1,8 @@
 # 의료기관평가인증 매뉴얼
 
 인증 교육 슬라이드(`인증교육.pdf`, 352쪽)를 핵심만 정리한 정적 HTML 매뉴얼.
+2026.9.30 에 교육자료 **Ver. 2.0**(`(ver.2)인증대비 부서교육자료_병동 중환자실 자료.pdf`, 123쪽, 2026.9.29)의 바뀐 내용을 반영했고,
+각 기준 아래 원본 슬라이드에 Ver.2 슬라이드를 먼저, 이전 자료 슬라이드를 그 아래에 보여 준다.
 첫 화면은 **1. 개요 · 2. 필수인증항목 · 3. 그 외 항목** 세 가지.
 
 ## 보기
@@ -17,10 +19,12 @@ docs/
 ├── index.html · styles.css · app.js   화면 (검색, 라우팅, 슬라이드 보기)
 ├── data.js                            본문 데이터 (build.py 가 자동 생성 — 직접 고치지 말 것)
 └── slides/                            원본 슬라이드 이미지 (WebP, thumb/ 는 미리보기)
+    └── v2/                            Ver.2 교육자료 슬라이드 (같은 구조)
 content/
-├── toc.json                           목차: 대구분 → 장 → 기준, 기준별 슬라이드 쪽 범위, 필수 여부
+├── toc.json                           목차: 대구분 → 장 → 기준, 기준별 슬라이드 쪽 범위(`pages`, Ver.2 는 `v2` 쪽 목록 · 장 표지 `divider2`), 필수 여부
 ├── sections/<기준번호>.json            기준별 본문 (요약 · 관련 지침 · 조사항목 · 블록)
-└── transcripts/pNNN.md                슬라이드 판독 원문 (검색 색인용)
+├── transcripts/pNNN.md                슬라이드 판독 원문 (검색 색인용)
+└── transcripts_v2/pNNN.md             Ver.2 슬라이드 판독 원문 (검색 색인용)
 build.py      content/ → docs/data.js
 validate.py   sections/*.json 형식 검사
 검토메모.md    원본 슬라이드에서 발견한 오탈자 · 모순 · 확인 필요 사항
@@ -35,6 +39,7 @@ validate.py   sections/*.json 형식 검사
 `push.cmd` 없이 직접 할 때는 `python build.py` 로 `docs/data.js` 만 갱신하면 됩니다.
 
 본문 블록 종류: `list`(목록) · `steps`(순서 절차) · `table`(표) · `qa`(질문/답) · `callout`(강조 상자) · `figure`(슬라이드 크게 보기).
+`figure` 에 `"deck": "v2"` 를 붙이면 Ver.2 슬라이드 쪽을 가리킨다 (없으면 이전 자료 쪽).
 문자열 안에서는 `**굵게**` 만 사용.
 
 ## 원본 PDF 가 바뀌었을 때
@@ -45,6 +50,12 @@ python build.py --slides 인증교육.pdf    # docs/slides/ 재생성 + data.js 
 ```
 
 쪽 번호가 달라졌다면 `content/toc.json` 의 `pages` 와 각 본문의 `figure.page` 도 함께 맞춘다.
+
+Ver.2 교육자료 슬라이드는 따로 만든다 (개인정보 가림 영역은 `build.py` 의 `MASKS_V2`).
+
+```bash
+python build.py --slides-v2 "(ver.2)인증대비 부서교육자료_병동 중환자실 자료.pdf"
+```
 
 ## 홈 화면 추가(PWA)
 

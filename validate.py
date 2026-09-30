@@ -28,11 +28,15 @@ def page_ranges():
                 pages = set(range(sec["pages"][0], sec["pages"][1] + 1))
                 if "divider" in ch:
                     pages.add(ch["divider"])
-                out[sec["id"]] = pages
+                pages2 = set(sec.get("v2", []))  # Ver.2 교육자료 쪽
+                if "divider2" in ch:
+                    pages2.add(ch["divider2"])
+                out[sec["id"]] = (pages, pages2)
     return out
 
 
-def check(sec_id, pages):
+def check(sec_id, page_sets):
+    pages, pages2 = page_sets
     errs, warns = [], []
     path = os.path.join(CONTENT, "sections", sec_id + ".json")
     if not os.path.exists(path):
@@ -91,7 +95,7 @@ def check(sec_id, pages):
         t = b["type"]
         allowed = {"type", "heading"} | {
             "list": {"items"}, "steps": {"items"}, "table": {"head", "rows"},
-            "qa": {"items"}, "callout": {"text", "tone"}, "figure": {"page", "caption"}}[t]
+            "qa": {"items"}, "callout": {"text", "tone"}, "figure": {"page", "caption", "deck"}}[t]
         if set(b) - allowed:
             errs.append("%s(%s): 허용되지 않는 키 %s" % (w, t, sorted(set(b) - allowed)))
         if t not in ("callout", "figure"):
@@ -159,7 +163,12 @@ def check(sec_id, pages):
                 errs.append(w + '.tone: "warn" | "info" | 생략')
         elif t == "figure":
             nfig += 1
-            if b.get("page") not in pages:
+            if b.get("deck", "v2") != "v2":
+                errs.append('%s.deck: "v2" 또는 생략' % w)
+            elif b.get("deck") == "v2":
+                if b.get("page") not in pages2:
+                    errs.append("%s.page: 이 기준의 Ver.2 슬라이드 쪽(%s)이어야 함" % (w, sorted(pages2)))
+            elif b.get("page") not in pages:
                 errs.append("%s.page: 이 기준의 슬라이드 쪽(%d~%d)이어야 함" % (w, min(pages), max(pages)))
             text(b.get("caption"), w + ".caption", 60)
     if nfig > 3:

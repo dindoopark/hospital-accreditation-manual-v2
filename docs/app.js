@@ -30,8 +30,16 @@
   }
   function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   const pad = (n) => String(n).padStart(3, '0');
-  const slideSrc = (p) => `slides/p${pad(p)}.webp`;
-  const thumbSrc = (p) => `slides/thumb/p${pad(p)}.webp`;
+  // 슬라이드 키: 이전 교육자료는 "16", Ver.2 교육자료는 "v2-14"
+  const V2 = 'v2-';
+  const slideKey = (deck, p) => (deck === 'v2' ? V2 + p : String(p));
+  const parseKey = (k) => (String(k).startsWith(V2) ? { dir: 'slides/v2/', p: Number(String(k).slice(V2.length)), v2: true } : { dir: 'slides/', p: Number(k), v2: false });
+  const slideSrc = (k) => { const s = parseKey(k); return `${s.dir}p${pad(s.p)}.webp`; };
+  const thumbSrc = (k) => { const s = parseKey(k); return `${s.dir}thumb/p${pad(s.p)}.webp`; };
+  const slideLabel = (k) => { const s = parseKey(k); return (s.v2 ? 'Ver.2 ' : '') + 'p.' + s.p; };
+  // 이미지가 늦게 떠도 자리를 미리 잡아 두도록 가로·세로 크기 (Ver.2 는 16:9, 이전 자료는 조금 더 납작함)
+  const thumbSize = (k) => (parseKey(k).v2 ? 'width="440" height="248"' : 'width="440" height="239"');
+  const slideSize = (k) => (parseKey(k).v2 ? 'width="1400" height="788"' : 'width="1400" height="762"');
   const secLabel = (sec) => (sec.no ? sec.no + ' ' : '') + sec.title;
 
   // ===== Views =====
@@ -43,6 +51,7 @@
           <p class="home-eyebrow">${esc(M.org || '')}</p>
           <h1 class="home-title">${esc(M.title)}</h1>
           <p class="home-sub">${esc(M.subtitle || '')}</p>
+          ${M.updated ? `<p class="home-upd">${esc(M.updated)}</p>` : ''}
         </div>
         <div class="part-grid">
           ${M.parts.map((p, i) => {
@@ -80,7 +89,7 @@
             <div class="chapter-head">
               ${ch.no ? `<span class="chapter-no">${esc(ch.no)}</span>` : ''}
               <h2 class="chapter-title">${esc(ch.title)}</h2>
-              ${ch.divider ? `<button type="button" class="chapter-std" data-slide="${ch.divider}">기준 · 원내 규정표</button>` : ''}
+              ${ch.divider2 || ch.divider ? `<button type="button" class="chapter-std" data-slide="${ch.divider2 ? slideKey('v2', ch.divider2) : ch.divider}"${ch.divider2 && ch.divider ? ` data-also="${ch.divider}"` : ''}>기준 · 원내 규정표</button>` : ''}
             </div>
             <ul class="sec-list">
               ${ch.sections.map((s) => `
@@ -118,8 +127,9 @@
     } else if (b.type === 'callout') {
       body = `<div class="callout ${esc(b.tone || '')}">${inline(b.text)}</div>`;
     } else if (b.type === 'figure') {
-      body = `<figure class="figure"><img loading="lazy" data-slide="${b.page}" src="${slideSrc(b.page)}" alt="${esc(b.caption || '')}" />
-        ${b.caption ? `<figcaption>${inline(b.caption)} (p.${b.page})</figcaption>` : ''}</figure>`;
+      const k = slideKey(b.deck, b.page);
+      body = `<figure class="figure"><img loading="lazy" ${slideSize(k)} data-slide="${k}" src="${slideSrc(k)}" alt="${esc(b.caption || '')}" />
+        ${b.caption ? `<figcaption>${inline(b.caption)} (${slideLabel(k)})</figcaption>` : ''}</figure>`;
     } else if (b.type === 'text') {
       body = `<p>${inline(b.text)}</p>`;
     }
@@ -133,7 +143,11 @@
     const { part, ch, sec } = f;
     const idx = flat.indexOf(f);
     const prev = flat[idx - 1], next = flat[idx + 1];
-    currentSlides = sec.slides || [];
+    const slideGroups = [
+      { title: 'Ver. 2.0 교육자료 (2026.9 · 병동·중환자실)', keys: (sec.slides2 || []).map((p) => slideKey('v2', p)) },
+      { title: '이전 교육자료 (상세)', keys: (sec.slides || []).map(String) },
+    ].filter((g) => g.keys.length);
+    currentSlides = slideGroups.reduce((all, g) => all.concat(g.keys), []);
     document.title = `${secLabel(sec)} – ${M.title}`;
     const single = part.chapters.length === 1 && part.chapters[0].sections.length === 1;
     const sv = sec.survey || {};
@@ -162,9 +176,11 @@
         ${currentSlides.length ? `
           <div class="block" id="blk-slides">
             <div class="slides-head"><h2>원본 슬라이드</h2><span class="hint">${currentSlides.length}장 · 누르면 크게 보기</span></div>
-            <div class="slide-grid">
-              ${currentSlides.map((p) => `<button type="button" data-slide="${p}"><img loading="lazy" src="${thumbSrc(p)}" alt="슬라이드 ${p}쪽" /><span class="pno">p.${p}</span></button>`).join('')}
-            </div>
+            ${slideGroups.map((g) => `
+              <h3 class="slides-sub">${esc(g.title)} <span>${g.keys.length}장</span></h3>
+              <div class="slide-grid">
+                ${g.keys.map((k) => `<button type="button" data-slide="${k}"><img loading="lazy" ${thumbSize(k)} src="${thumbSrc(k)}" alt="슬라이드 ${slideLabel(k)}" /><span class="pno">${slideLabel(k)}</span></button>`).join('')}
+              </div>`).join('')}
           </div>` : ''}
         <nav class="pager">
           ${prev ? `<a class="prev" href="#/s/${encodeURIComponent(prev.sec.id)}"><span class="dir">&larr; 이전</span><span class="ttl">${esc(secLabel(prev.sec))}</span></a>` : ''}
@@ -322,9 +338,10 @@
 
   // ===== Lightbox (prev / next within the section's slides) =====
   let lbIndex = -1;
-  function openSlide(page) {
-    let i = currentSlides.indexOf(page);
-    if (i === -1) { currentSlides = [page]; i = 0; }
+  function openSlide(key, also) {
+    key = String(key);
+    let i = currentSlides.indexOf(key);
+    if (i === -1) { currentSlides = also ? [key, String(also)] : [key]; i = 0; }
     lbIndex = i;
     showSlide();
     lightbox.hidden = false;
@@ -333,8 +350,8 @@
   function showSlide() {
     const p = currentSlides[lbIndex];
     lightboxImg.src = slideSrc(p);
-    lightboxImg.alt = `슬라이드 ${p}쪽`;
-    lightboxCount.textContent = `p.${p}  ·  ${lbIndex + 1} / ${currentSlides.length}`;
+    lightboxImg.alt = `슬라이드 ${slideLabel(p)}`;
+    lightboxCount.textContent = `${slideLabel(p)}  ·  ${lbIndex + 1} / ${currentSlides.length}`;
     const multi = currentSlides.length > 1;
     lightbox.querySelector('.lb-prev').hidden = !multi;
     lightbox.querySelector('.lb-next').hidden = !multi;
@@ -354,7 +371,7 @@
       return;
     }
     const el = e.target.closest('[data-slide]');
-    if (el) openSlide(Number(el.dataset.slide));
+    if (el) openSlide(el.dataset.slide, el.dataset.also);
   });
   lightbox.addEventListener('click', (e) => {
     const act = e.target.dataset.act;
