@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""content/ → docs/data.js 생성기.
+
+  python build.py                 # content/toc.json + content/sections/*.json → docs/data.js
+  python build.py --slides 원본.pdf # 슬라이드 이미지(docs/slides/*.webp)까지 다시 생성 (pymupdf, pillow 필요)
+
+content/toc.json            목차(대구분 → 장 → 기준)와 각 기준의 원본 슬라이드 쪽 범위
+content/sections/<id>.json  기준별 본문(요약 · 조사항목 · 블록)
+content/transcripts/pNNN.md 슬라이드 판독 원문(검색 색인용)
+"""
+import io
+import json
+import os
+import re
+import sys
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+CONTENT = os.path.join(ROOT, "content")
+DOCS = os.path.join(ROOT, "docs")
+
+
+def load_json(path):
+    with io.open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def strip_figures(ln):
+    """[그림: …] 설명을 검색 색인에서 뺀다. 안에 대괄호가 겹쳐 있어도 짝이 맞는 데까지 통째로 뺀다."""
+    out, i = [], 0
+    while True:
+        j = ln.find("[그림:", i)
+        if j < 0:
+            out.append(ln[i:])
+            return "".join(out)
+        out.append(ln[i:j] + " ")
+        depth, k = 0, j
+        while k < len(ln):
+            if ln[k] == "[":
+                depth += 1
+            elif ln[k] == "]":
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        i = k + 1
+
+
+def transcript_text(page, folder="transcripts"):
+    path = os.path.join(CONTENT, folder, "p%03d.md" % page)
+    if not os.path.exists(path):
+        return ""
+    with io.open(path, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+    out = []
+    for ln in lines:
+        if ln.startswith("# p") or ln.startswith("- kind:") or ln.startswith("- redBorder:"):
+            continue
+        if re.fullmatch(r"[\s|:\-]*", ln):
+            continue
+        ln = strip_figures(ln)
+        ln = re.sub(r"[#*|`>\[\]]+", " ", ln)
+        out.append(ln.strip())
+    return re.sub(r"\s+", " ", " ".join(out)).strip()
+
+
+def build_data():
+    toc = load_json(os.path.join(CONTENT, "toc.json"))
+    missing = []
+    for part in toc["parts"]:
+        for ch in part["chapters"]:
+            for sec in ch["sections"]:
+                first, last = sec.pop("pages")
+                slides = [p for p in range(first, last + 1) if p not in set(sec.pop("skip", []))]
+                slides = sec.pop("extra_before", []) + slides
+                path = os.path.join(CONTENT, "sections", sec["id"] + ".json")
+                if os.path.exists(path):
+                    body = load_json(path)
+                    for key in ("summary", "regulations", "survey", "blocks"):
+                        if key in body:
+                            sec[key] = body[key]
+                else:
+                    missing.append(sec["id"])
+                sec["slides"] = slides
+                texts = [transcript_text(p) for p in slides]
+                sec["search"] = " ".join(filter(None, texts))
+    out = os.path.join(DOCS, "data.js")
+    with io.open(out, "w", encoding="utf-8", newline="\n") as f:
+        f.write("window.MANUAL = ")
+        json.dump(toc, f, ensure_ascii=False, separators=(",", ":"))
+        f.write(";\n")
+    n = sum(len(c["sections"]) for p in toc["parts"] for c in p["chapters"])
+    print("data.js: %d sections, %.0f KB" % (n, os.path.getsize(out) / 1024))
+    if missing:
+        print("본문 없음:", ", ".join(missing))
+
+
+# 슬라이드 캡처에 그대로 노출된 환자 식별정보 가림 (쪽 → [(x0, y0, x1, y1)] 0~1 비율 좌표)
+# 2026.10.17: 쪽 번호를 새 인증교육 자료(358장) 기준으로 옮김 (괄호 안 '구판 p.N' 은 352쪽 PDF 의 쪽)
+MASKS = {
+    198: [(0.095, 0.095, 0.165, 0.142), (0.222, 0.095, 0.302, 0.142)],  # 병원생활안내문: 등록번호, 성명 (구판 p.191)
+    116: [(0.349, 0.4575, 0.425, 0.4705), (0.342, 0.4705, 0.418, 0.487), (0.2641, 0.454, 0.2732, 0.4685), (0.2645, 0.4695, 0.2743, 0.483)],  # 부록 3: 직원 개인 휴대전화 번호 2건 (당직폰은 유지) (구판 p.117) / 2026.10.17 최소 가림 추가: 직원 이름 2건은 가운데 글자만(박ㅇ수 방식)
+    # 2026.9.30 추가: 환자·직원 식별정보 (이미 올린 docs/slides 이미지에도 같은 좌표로 가림 적용)
+    17: [(0.218, 0.161, 0.273, 0.198), (0.236, 0.186, 0.307, 0.228), (0.281, 0.210, 0.428, 0.253), (0.216, 0.728, 0.251, 0.756)],  # BESTCare 캡처: 환자 성·주민번호 앞자리·진단명, 동명이인 이름 일부
+    32: [(0.851, 0.671, 0.866, 0.696), (0.873, 0.677, 0.904, 0.694), (0.878, 0.678, 0.904, 0.705)],  # 환자확인팔찌 사진: 성·나이·생년 잔여 글자 (수술부위 표기는 유지). 새 자료에서 사진이 조금 왼쪽으로 밀려 가운데 상자 추가
+    39: [(0.699, 0.740, 0.736, 0.771), (0.848, 0.776, 0.893, 0.877)],  # 환자카드 이름, 환자확인팔찌 생년월일
+    124: [(0.511, 0.540, 0.538, 0.566), (0.2138, 0.7398, 0.2481, 0.755), (0.2534, 0.7398, 0.2871, 0.755)],  # 직무기술서 캡처: 로그인 직원 실명 / 2026.10.17 최소 가림 추가: 직원리스트 최초입사일·입사일
+    127: [(0.067, 0.628, 0.104, 0.804)],  # 개인별교육현황: 직원번호
+    179: [(0.588, 0.797, 0.616, 0.820)],  # 정상작동 확인 라벨 점검자 이름 (구판 p.172)
+    186: [(0.220, 0.325, 0.263, 0.362)],  # 그룹웨어 게시자 이름 (구판 p.179)
+    220: [(0.104, 0.655, 0.171, 0.689), (0.214, 0.655, 0.281, 0.689), (0.478, 0.905, 0.600, 1.000)],  # 환자영양관리: 환자번호·이름 잔여, 영양사ID (구판 p.212)
+    247: [(0.075, 0.747, 0.164, 0.778), (0.583, 0.652, 0.616, 0.680), (0.502, 0.714, 0.533, 0.740), (0.492, 0.927, 0.519, 0.951), (0.577, 0.7172, 0.5875, 0.7343), (0.607, 0.7172, 0.615, 0.7343)],  # 환자영양관리: 환자번호·이름, 타과의뢰 의사 이름 3곳 (구판 p.240) / 2026.10.17 최소 가림 추가: 환자위치 병동·병실 값
+    248: [(0.186, 0.848, 0.252, 0.986), (0.763, 0.482, 0.786, 0.522), (0.381, 0.324, 0.402, 0.366), (0.1557, 0.848, 0.17, 0.986), (0.1783, 0.848, 0.186, 0.986)],  # NST환자관리: 환자 7명 등록번호·이름, 영양사ID, 환자번호 잔여 (구판 p.241) / 2026.10.17 최소 가림 추가: 환자 7명 병동·병실 열
+    289: [(0.090, 0.389, 0.122, 0.542)],  # 온도점검표 확인자 서명 (구판 p.283)
+    302: [(0.886, 0.918, 0.939, 0.945)],  # 약품정보조회 상태표시줄 ID/PW 문자열 (구판 p.296)
+    314: [(0.354, 0.773, 0.388, 0.800)],  # 간호기록 캡처: 의료진 이름 (구판 p.308)
+}
+
+
+def apply_masks(im, boxes):
+    from PIL import ImageDraw
+    w, h = im.size
+    draw = ImageDraw.Draw(im)
+    for x0, y0, x1, y1 in boxes:
+        draw.rectangle([x0 * w, y0 * h, x1 * w, y1 * h], fill=(225, 225, 225))
+    return im
+
+
+
+
+def build_slides(pdf, sub="", masks=None):
+    import pymupdf
+    from PIL import Image
+    masks = MASKS if masks is None else masks
+    full = os.path.join(DOCS, "slides", sub) if sub else os.path.join(DOCS, "slides")
+    thumb = os.path.join(full, "thumb")
+    os.makedirs(thumb, exist_ok=True)
+    doc = pymupdf.open(pdf)
+    for i, pg in enumerate(doc, 1):
+        pix = pg.get_pixmap(matrix=pymupdf.Matrix(1.65, 1.65))
+        im = apply_masks(Image.frombytes("RGB", (pix.width, pix.height), pix.samples), masks.get(i, []))
+        w, h = im.size
+        im.resize((1400, round(h * 1400 / w)), Image.LANCZOS).save(
+            os.path.join(full, "p%03d.webp" % i), "WEBP", quality=68, method=6)
+        im.resize((440, round(h * 440 / w)), Image.LANCZOS).save(
+            os.path.join(thumb, "p%03d.webp" % i), "WEBP", quality=55, method=6)
+    print("slides: %d pages" % len(doc))
+
+
+def build_icons():
+    """docs/icons/icon.svg 와 같은 모양의 PNG 아이콘 생성 (홈 화면 추가용)."""
+    from PIL import Image, ImageDraw
+    out = os.path.join(DOCS, "icons")
+    os.makedirs(out, exist_ok=True)
+    bg, fg = (17, 17, 17), (255, 255, 255)
+    check = [(164 / 512.0, 266 / 512.0), (230 / 512.0, 332 / 512.0), (350 / 512.0, 190 / 512.0)]
+
+    def draw(size, radius_ratio, scale=4):
+        s = size * scale
+        im = Image.new("RGB", (s, s), (255, 255, 255))
+        d = ImageDraw.Draw(im)
+        if radius_ratio:
+            d.rounded_rectangle([0, 0, s - 1, s - 1], radius=int(s * radius_ratio), fill=bg)
+        else:
+            d.rectangle([0, 0, s, s], fill=bg)
+        pts = [(x * s, y * s) for x, y in check]
+        w = int(s * 44 / 512.0)
+        d.line(pts, fill=fg, width=w, joint="curve")
+        for x, y in pts:  # 선 끝을 둥글게
+            d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=fg)
+        return im.resize((size, size), Image.LANCZOS)
+
+    for name, size, radius in [
+        ("icon-192.png", 192, 112 / 512.0), ("icon-512.png", 512, 112 / 512.0),
+        ("icon-maskable-192.png", 192, 0), ("icon-maskable-512.png", 512, 0),
+        ("apple-touch-icon.png", 180, 0), ("favicon-32.png", 32, 0.18), ("favicon-16.png", 16, 0.18),
+    ]:
+        draw(size, radius).save(os.path.join(out, name), "PNG", optimize=True)
+    print("icons: 7 files")
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if args and args[0] == "--icons":
+        build_icons()
+    elif len(args) >= 2 and args[0] == "--slides":
+        build_slides(args[1])
+        build_data()
+    else:
+        build_data()
